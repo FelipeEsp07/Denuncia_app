@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:io'; // Importación necesaria para usar la clase File
+import 'package:image_picker/image_picker.dart';
 
 class RealizarDenunciaScreen extends StatefulWidget {
   const RealizarDenunciaScreen({super.key});
@@ -15,6 +17,7 @@ class _RealizarDenunciaScreenState extends State<RealizarDenunciaScreen> {
   TimeOfDay? _horaSeleccionada;
   String? _clasificacionSeleccionada;
   String? _otraClasificacionSeleccionada;
+  final List<File> _imagenesSeleccionadas = [];
 
   final List<String> _clasificaciones = [
     'Robo',
@@ -55,6 +58,32 @@ class _RealizarDenunciaScreenState extends State<RealizarDenunciaScreen> {
         _horaSeleccionada = hora;
       });
     }
+  }
+
+  Future<void> _seleccionarImagen() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? imagen = await picker.pickImage(source: ImageSource.gallery);
+    if (imagen != null) {
+      setState(() {
+        _imagenesSeleccionadas.add(File(imagen.path));
+      });
+    }
+  }
+
+  Future<void> _tomarFoto() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? foto = await picker.pickImage(source: ImageSource.camera);
+    if (foto != null) {
+      setState(() {
+        _imagenesSeleccionadas.add(File(foto.path));
+      });
+    }
+  }
+
+  void _eliminarImagen(int index) {
+    setState(() {
+      _imagenesSeleccionadas.removeAt(index);
+    });
   }
 
   void _enviarDenuncia() {
@@ -274,6 +303,87 @@ class _RealizarDenunciaScreenState extends State<RealizarDenunciaScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                Row(
+                  children: const [
+                    Icon(Icons.image, color: Color(0xFF2E7D32)),
+                    SizedBox(width: 8),
+                    Text(
+                      'Imágenes (opcional)',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _seleccionarImagen,
+                      icon: const Icon(Icons.photo_library, color: Colors.white),
+                      label: const Text(
+                        'Seleccionar Imagen',
+                        style: TextStyle(color: Colors.white), // Cambiar texto a blanco
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: _tomarFoto,
+                      icon: const Icon(Icons.camera_alt, color: Colors.white),
+                      label: const Text(
+                        'Tomar Foto',
+                        style: TextStyle(color: Colors.white), // Cambiar texto a blanco
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (_imagenesSeleccionadas.isNotEmpty) ...[
+                  const Text(
+                    'Nota: Las imágenes no deben mostrar contenido sensible (contenido sensible).',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (_imagenesSeleccionadas.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: List.generate(
+                      _imagenesSeleccionadas.length,
+                      (index) => Stack(
+                        children: [
+                          Image.file(
+                            _imagenesSeleccionadas[index],
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: () => _eliminarImagen(index),
+                              child: const CircleAvatar(
+                                radius: 12,
+                                backgroundColor: Colors.red,
+                                child: Icon(Icons.close, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 const Text(
                   'Nota: Las denuncias realizadas aquí no reemplazan las denuncias formales ante la Fiscalía.',

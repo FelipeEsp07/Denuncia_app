@@ -63,6 +63,13 @@ class MainScreen extends StatelessWidget {
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.home), // Icono de casa
+              title: const Text('Inicio'),
+              onTap: () {
+                Navigator.pushNamed(context, '/'); // Navegar al MainScreen
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.person),
               title: const Text('Ver mi Perfil'),
               onTap: () {
@@ -95,7 +102,7 @@ class MainScreen extends StatelessWidget {
               leading: const Icon(Icons.logout),
               title: const Text('Cerrar Sesión'),
               onTap: () {
-                Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false); // Log out
+                Navigator.pushNamedAndRemoveUntil(context, '/inicio', (route) => false); // Navigate to InicioScreen
               },
             ),
           ],

@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -19,4 +20,4 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/  # Path to your image assets
+    - assets/images/  

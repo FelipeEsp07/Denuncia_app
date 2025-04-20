@@ -176,7 +176,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea( // Prevent content from overlapping system UI
-        child: SingleChildScrollView( // Allow scrolling when the keyboard appears
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom, // Adjust for keyboard
+          ),
           child: Container(
             width: double.infinity,
             height: MediaQuery.of(context).size.height, // Ensure full screen height
@@ -237,7 +240,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
                             CustomButton(
                               text: 'Volver',
                               onPressed: () {
-                                Navigator.pushNamed(context, '/');
+                                final args = ModalRoute.of(context)?.settings.arguments as Map?;
+                                if (args != null && args['from'] == 'iniciar') {
+                                  Navigator.pushNamed(context, '/iniciar'); // Navigate back to iniciar sesión
+                                } else {
+                                  Navigator.pushNamed(context, '/inicio'); // Default to inicio
+                                }
                               },
                             ),
                           ],
