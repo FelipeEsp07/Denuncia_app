@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io'; // Importación necesaria para usar la clase File
 import 'package:image_picker/image_picker.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // Importar Google Maps
+import 'package:facalert/screens/seleccionar_ubicacion_mapa_screen.dart'; // Importar la pantalla del mapa
 
 class RealizarDenunciaScreen extends StatefulWidget {
   const RealizarDenunciaScreen({super.key});
@@ -18,6 +20,7 @@ class _RealizarDenunciaScreenState extends State<RealizarDenunciaScreen> {
   String? _clasificacionSeleccionada;
   String? _otraClasificacionSeleccionada;
   final List<File> _imagenesSeleccionadas = [];
+  LatLng? _ubicacionSeleccionada; // Nueva variable para almacenar la ubicación seleccionada
 
   final List<String> _clasificaciones = [
     'Robo',
@@ -84,6 +87,24 @@ class _RealizarDenunciaScreenState extends State<RealizarDenunciaScreen> {
     setState(() {
       _imagenesSeleccionadas.removeAt(index);
     });
+  }
+
+  Future<void> _seleccionarUbicacionEnMapa() async {
+    final LatLng? ubicacion = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SeleccionarUbicacionMapaScreen(
+          ubicacionInicial: _ubicacionSeleccionada ?? const LatLng(4.828903865120192, -74.3552112579438),
+        ),
+      ),
+    );
+
+    if (ubicacion != null) {
+      setState(() {
+        _ubicacionSeleccionada = ubicacion;
+        _ubicacionController.text = '${ubicacion.latitude}, ${ubicacion.longitude}';
+      });
+    }
   }
 
   void _enviarDenuncia() {
@@ -232,10 +253,12 @@ class _RealizarDenunciaScreenState extends State<RealizarDenunciaScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _ubicacionController,
+                  readOnly: true, // Hacer que el campo sea de solo lectura
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
-                    hintText: 'Ingrese la ubicación',
+                    hintText: 'Seleccione la ubicación en el mapa',
                   ),
+                  onTap: _seleccionarUbicacionEnMapa, // Abrir el mapa al hacer clic
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'La ubicación es obligatoria';

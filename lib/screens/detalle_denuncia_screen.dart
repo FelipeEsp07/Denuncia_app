@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // Importar Google Maps
 
 class DetalleDenunciaScreen extends StatelessWidget {
   final Map<String, String> denuncia;
@@ -65,6 +66,57 @@ class DetalleDenunciaScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 16),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: const [
+                    Icon(Icons.location_on, color: Color(0xFF2E7D32)),
+                    SizedBox(width: 8),
+                    Text(
+                      'Dirección:',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  denuncia['direccion'] ?? 'Dirección no disponible',
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Ubicación en el mapa:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 200, // Altura del mapa
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(
+                        double.parse(denuncia['latitud'] ?? '0.0'),
+                        double.parse(denuncia['longitud'] ?? '0.0'),
+                      ),
+                      zoom: 15,
+                    ),
+                    markers: {
+                      Marker(
+                        markerId: const MarkerId('ubicacion_denuncia'),
+                        position: LatLng(
+                          double.parse(denuncia['latitud'] ?? '0.0'),
+                          double.parse(denuncia['longitud'] ?? '0.0'),
+                        ),
+                        infoWindow: InfoWindow(
+                          title: denuncia['titulo'],
+                          snippet: denuncia['direccion'],
+                        ),
+                      ),
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Center(

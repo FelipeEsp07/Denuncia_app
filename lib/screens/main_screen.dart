@@ -1,10 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Datos de ejemplo: ubicaciones con cantidad de denuncias
+    final List<Map<String, dynamic>> denuncias = [
+      {'lat': 4.828903865120192, 'lng': -74.3552112579438, 'cantidad': 2},
+      {'lat': 4.816438331259444, 'lng': -74.34789419163647, 'cantidad': 10},
+      {'lat': 4.830000000000000, 'lng': -74.350000000000000, 'cantidad': 5},
+    ];
+
+    // Generar círculos para el mapa de calor
+    Set<Circle> heatmapCircles = denuncias.map((denuncia) {
+      Color color;
+      if (denuncia['cantidad'] < 3) {
+        color = Colors.green.withOpacity(0.5); // Verde para pocas denuncias
+      } else if (denuncia['cantidad'] < 7) {
+        color = Colors.yellow.withOpacity(0.5); // Amarillo para denuncias moderadas
+      } else {
+        color = Colors.red.withOpacity(0.5); // Rojo para muchas denuncias
+      }
+
+      return Circle(
+        circleId: CircleId('${denuncia['lat']}_${denuncia['lng']}'),
+        center: LatLng(denuncia['lat'], denuncia['lng']),
+        radius: 200, // Radio del círculo en metros
+        fillColor: color,
+        strokeColor: color,
+        strokeWidth: 1,
+      );
+    }).toSet();
+
+    // Datos de ejemplo: parcelas con cantidad de denuncias
+    final List<Map<String, dynamic>> parcelas = [
+      {
+        'id': 'parcela_1',
+        'puntos': [
+          LatLng(4.828903865120192, -74.3552112579438),
+          LatLng(4.829903865120192, -74.3552112579438),
+          LatLng(4.829903865120192, -74.3542112579438),
+          LatLng(4.828903865120192, -74.3542112579438),
+        ],
+        'cantidad': 2,
+      },
+      {
+        'id': 'parcela_2',
+        'puntos': [
+          LatLng(4.816438331259444, -74.34789419163647),
+          LatLng(4.817438331259444, -74.34789419163647),
+          LatLng(4.817438331259444, -74.34689419163647),
+          LatLng(4.816438331259444, -74.34689419163647),
+        ],
+        'cantidad': 10,
+      },
+    ];
+
+    // Generar polígonos para las parcelas
+    Set<Polygon> parcelasPolygons = parcelas.map((parcela) {
+      Color color;
+      if (parcela['cantidad'] < 3) {
+        color = Colors.green.withOpacity(0.5); // Verde para pocas denuncias
+      } else if (parcela['cantidad'] < 7) {
+        color = Colors.yellow.withOpacity(0.5); // Amarillo para denuncias moderadas
+      } else {
+        color = Colors.red.withOpacity(0.5); // Rojo para muchas denuncias
+      }
+
+      return Polygon(
+        polygonId: PolygonId(parcela['id']),
+        points: parcela['puntos'],
+        fillColor: color,
+        strokeColor: color,
+        strokeWidth: 1,
+      );
+    }).toSet();
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false, // Remove the default back arrow
@@ -112,23 +185,43 @@ class MainScreen extends StatelessWidget {
         children: [
           Expanded(
             flex: 3,
-            child: Container(
-              margin: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.grey[300], // Placeholder color for the map
-                borderRadius: BorderRadius.circular(8.0),
-                border: Border.all(color: Colors.grey, width: 1.0),
+            child: GoogleMap(
+              initialCameraPosition: const CameraPosition(
+                target: LatLng(4.828903865120192, -74.3552112579438),
+                zoom: 15,
               ),
-              child: const Center(
-                child: Text(
-                  'Mapa Placeholder',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              circles: heatmapCircles, // Agregar los círculos al mapa
+              polygons: parcelasPolygons, // Agregar los polígonos al mapa
+              onTap: (LatLng latLong) async {
+                TextEditingController _textController = TextEditingController();
+
+                String? title = await showDialog<String>(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text("Agregar marcador"),
+                      content: TextField(
+                        controller: _textController,
+                        decoration: const InputDecoration(hintText: "Nombre del marcador"),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(null),
+                          child: const Text("Cancelar"),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(_textController.text),
+                          child: const Text("Guardar"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+                if (title != null && title.isNotEmpty) {
+                  (context as Element).markNeedsBuild(); // Trigger rebuild
+                }
+              },
             ),
           ),
           Expanded(

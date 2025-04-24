@@ -12,6 +12,8 @@ import 'screens/vista_administrador_screen.dart';
 import 'screens/supervisar_denuncias_screen.dart';
 import 'screens/gestionar_usuarios_screen.dart';
 import 'screens/generar_informes_screen.dart';
+import 'screens/seleccionar_ubicacion_mapa_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // Importar LatLng
 
 void main() {
   runApp(const MyApp());
@@ -41,6 +43,9 @@ class MyApp extends StatelessWidget {
         '/supervisarDenuncias': (context) => const SupervisarDenunciasScreen(),
         '/gestionarUsuarios': (context) => const GestionarUsuariosScreen(),
         '/generarInformes': (context) => const GenerarInformesScreen(),
+        '/seleccionarUbicacionMapa': (context) => const SeleccionarUbicacionMapaScreen(
+              ubicacionInicial: LatLng(4.828903865120192, -74.3552112579438), // Asegurar que LatLng esté importado
+            ),
       },
     );
   }
