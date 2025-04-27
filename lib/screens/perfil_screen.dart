@@ -199,11 +199,16 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   icon: _isSaving
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.save, color: Colors.white),
-                  label: Text(_isSaving ? 'Guardando...' : 'Guardar Cambios'),
+                  label: Text(
+                    _isSaving ? 'Guardando...' : 'Guardar Cambios',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white), 
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D32),
+                    backgroundColor: const Color(0xFF2E7D32), 
                     minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
+                    padding: const EdgeInsets.symmetric(vertical: 16), 
+                    elevation: 5, 
                   ),
                 ),
               ),
