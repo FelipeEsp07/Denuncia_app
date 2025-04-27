@@ -5,7 +5,8 @@ class CustomTextField extends StatelessWidget {
   final String label;
   final bool isPassword;
   final String? Function(String?)? validator;
-  final IconData? icon; // Added icon parameter
+  final IconData? icon;
+  final TextInputType? keyboardType;
 
   const CustomTextField({
     Key? key,
@@ -13,7 +14,8 @@ class CustomTextField extends StatelessWidget {
     required this.label,
     this.isPassword = false,
     this.validator,
-    this.icon, // Initialize icon
+    this.icon,
+    this.keyboardType,
   }) : super(key: key);
 
   @override
@@ -22,9 +24,10 @@ class CustomTextField extends StatelessWidget {
       controller: controller,
       obscureText: isPassword,
       validator: validator,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: icon != null ? Icon(icon) : null, // Add icon to the field
+        prefixIcon: icon != null ? Icon(icon) : null,
         border: const OutlineInputBorder(),
       ),
     );

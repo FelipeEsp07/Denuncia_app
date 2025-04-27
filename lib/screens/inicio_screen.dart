@@ -7,90 +7,109 @@ class InicioScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            children: [
-              Expanded(
-                flex: 3,
-                child: ClipPath(
-                  clipper: ArcClipper(), // Use a custom clipper for the arc
-                  child: Container(
-                    color: const Color(0xFFF2F1F6),
-                    width: double.infinity,
-                    child: Stack(
-                      alignment: Alignment.center, // Center elements in the Stack
-                      children: [
-                        Image.asset(
-                          'assets/images/sapo.jpg',
-                          fit: BoxFit.cover, // Cover the entire background without gray space
-                          width: double.infinity,
-                          height: double.infinity,
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Top Arc with background image and logo
+                  ClipPath(
+                    clipper: ArcClipper(),
+                    child: Container(
+                      height: 300,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFFF2F1F6), Color(0xFFE0DFE9)],
                         ),
-                        Positioned.fill(
-                          child: Container(
-                            color: const Color(0xFFF2F1F6).withOpacity(0.8), // Add a semi-transparent white overlay
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
                           ),
-                        ),
-                        Align(
-                          alignment: Alignment.center, // Center the logo within the Stack
-                          child: Image.asset(
-                            'assets/images/facalert_logo.png', // Use the actual logo image
-                            width: 300, // Adjust the size of the logo for better fit
+                        ],
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/sapo.jpg',
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                          Container(
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                          Image.asset(
+                            'assets/images/facalert_logo.png',
+                            width: 250,
                             fit: BoxFit.contain,
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Description Text
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'Bienvenido a la plataforma de denuncias ciudadanas para Facatativá, Cundinamarca',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontFamily: 'Verdana',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Buttons Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        CustomButton(
+                          text: 'Iniciar Sesión',
+                          onPressed: () => Navigator.pushNamed(context, '/iniciar'),
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          textColor: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 4,
+                        ),
+                        const SizedBox(height: 16),
+                        CustomButton(
+                          text: 'Registrarse',
+                          onPressed: () => Navigator.pushNamed(context, '/registro'),
+                          backgroundColor: Theme.of(context).colorScheme.secondary,
+                          textColor: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 4,
                         ),
                       ],
                     ),
                   ),
-                ),
+
+                  const SizedBox(height: 40),
+                ],
               ),
-              const SizedBox(height: 20), // Add spacing between the arc and the text
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Bienvenido a la plataforma de denuncias ciudadanas para Facatativá, Cundinamarca',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 0, 0, 0), // Change text color for better contrast
-                    fontFamily: 'Verdana',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4, // Adjust line height for better readability
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: CustomButton(
-                        text: 'Iniciar Sesión',
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/iniciar');
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: CustomButton(
-                        text: 'Registrarse',
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/registro');
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

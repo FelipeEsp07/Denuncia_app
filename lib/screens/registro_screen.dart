@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
+import '../models/registro.dart';
+import '../config.dart';
+import '../widgets/map_picker_screen.dart'; 
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -20,241 +25,266 @@ class _RegistroScreenState extends State<RegistroScreen> {
     'password': TextEditingController(),
     'confirmPassword': TextEditingController(),
   };
+  double? _latitud;
+  double? _longitud;
+
+  final Dio _dio = Dio(BaseOptions(baseUrl: Config.apiBase));
 
   @override
   void dispose() {
-    for (var controller in _controllers.values) {
-      controller.dispose();
+    for (var c in _controllers.values) {
+      c.dispose();
     }
     super.dispose();
   }
 
-  void _register() {
-    if (_formKey.currentState?.validate() ?? false) {
-      final password = _controllers['password']!.text.trim();
-      final confirmPassword = _controllers['confirmPassword']!.text.trim();
+  Future<void> _pickLocation() async {
+    // Centro aproximado de Facatativá
+    final initial = LatLng(4.8176, -74.3542);
+    final LatLng? pos = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapPickerScreen(initialPosition: initial),
+      ),
+    );
+    if (pos != null) {
+      setState(() {
+        _latitud = pos.latitude;
+        _longitud = pos.longitude;
+      });
+    }
+  }
 
-      if (password != confirmPassword) {
-        _showMessage('Las contraseñas no coinciden.');
-        return;
+  Future<void> _register() async {
+    if (_formKey.currentState?.validate() != true) return;
+
+    if (_latitud == null || _longitud == null) {
+      _showMessage('Debes seleccionar tu ubicación en el mapa.');
+      return;
+    }
+
+    final pwd = _controllers['password']!.text.trim();
+    final confirm = _controllers['confirmPassword']!.text.trim();
+    if (pwd != confirm) {
+      _showMessage('Las contraseñas no coinciden.');
+      return;
+    }
+
+    try {
+      final registrationRequest = RegistrationRequest(
+        nombre: _controllers['nombre']!.text.trim(),
+        cedula: _controllers['cedula']!.text.trim(),
+        telefono: _controllers['telefono']!.text.trim(),
+        direccion: _controllers['direccion']!.text.trim(),
+        email: _controllers['email']!.text.trim(),
+        password: pwd,
+        latitud: _latitud!,
+        longitud: _longitud!,
+      );
+
+      final response = await _dio.post(
+        '/register',
+        data: registrationRequest.toJson(),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        _showMessage('Cuenta creada exitosamente.', success: true);
+        Navigator.pushReplacementNamed(context, '/inicio');
+      } else {
+        _showMessage('Error al crear la cuenta.');
       }
-
-      _showMessage('Cuenta creada exitosamente.', success: true);
-
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+    } catch (e) {
+      _showMessage('Error de conexión: ${e.toString()}');
     }
   }
 
   void _showMessage(String message, {bool success = false}) {
     final color = success ? Colors.green : Colors.red;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: color,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: color),
+      );
     });
   }
 
-  List<Widget> _buildFormFields() {
-    return [
-      CustomTextField(
-        controller: _controllers['nombre']!,
-        label: 'Nombre',
-        icon: Icons.person,
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'El nombre es obligatorio.';
-          }
-          if (value.length < 3) {
-            return 'El nombre debe tener al menos 3 caracteres.';
-          }
-          return null;
-        },
-      ),
-      const SizedBox(height: 16),
-      CustomTextField(
-        controller: _controllers['cedula']!,
-        label: 'Cédula',
-        icon: Icons.badge,
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'La cédula es obligatoria.';
-          }
-          if (!RegExp(r'^\d+$').hasMatch(value)) {
-            return 'La cédula debe contener solo números.';
-          }
-          return null;
-        },
-      ),
-      const SizedBox(height: 16),
-      CustomTextField(
-        controller: _controllers['telefono']!,
-        label: 'Teléfono',
-        icon: Icons.phone,
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'El teléfono es obligatorio.';
-          }
-          if (!RegExp(r'^\d{10}$').hasMatch(value)) {
-            return 'El teléfono debe tener 10 dígitos.';
-          }
-          return null;
-        },
-      ),
-      const SizedBox(height: 16),
-      CustomTextField(
-        controller: _controllers['direccion']!,
-        label: 'Dirección',
-        icon: Icons.home,
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'La dirección es obligatoria.';
-          }
-          if (!RegExp(r'^[a-zA-Z0-9\s,.-]+$').hasMatch(value)) {
-            return 'Ingrese una dirección válida.';
-          }
-          if (value.length < 5) {
-            return 'La dirección debe tener al menos 5 caracteres.';
-          }
-          return null;
-        },
-      ),
-      const SizedBox(height: 16),
-      CustomTextField(
-        controller: _controllers['email']!,
-        label: 'Correo Electrónico',
-        icon: Icons.email,
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'El correo electrónico es obligatorio.';
-          }
-          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-            return 'Ingrese un correo electrónico válido.';
-          }
-          return null;
-        },
-      ),
-      const SizedBox(height: 16),
-      CustomTextField(
-        controller: _controllers['password']!,
-        label: 'Contraseña',
-        icon: Icons.lock,
-        isPassword: true, // Always obscure the password
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'La contraseña es obligatoria.';
-          }
-          if (value.length < 6) {
-            return 'La contraseña debe tener al menos 6 caracteres.';
-          }
-          return null;
-        },
-      ),
-      const SizedBox(height: 16),
-      CustomTextField(
-        controller: _controllers['confirmPassword']!,
-        label: 'Confirmar Contraseña',
-        icon: Icons.lock_outline,
-        isPassword: true, // Always obscure the password
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'Debe confirmar la contraseña.';
-          }
-          return null;
-        },
-      ),
-    ];
+  String? _validateField(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Por favor ingrese $fieldName.';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Por favor ingrese el correo.';
+    }
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'Ingrese un correo válido.';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Por favor ingrese la contraseña.';
+    }
+    if (value.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres.';
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea( // Prevent content from overlapping system UI
-        child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom, // Adjust for keyboard
-          ),
-          child: Container(
-            width: double.infinity,
-            height: MediaQuery.of(context).size.height, // Ensure full screen height
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF2F1F6).withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(8.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Encabezado
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2F1F6).withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 8,
+                              offset: Offset(0, 4)),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Crear Cuenta',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontFamily: 'Verdana',
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.15,
-                        ),
+                      child: Column(
+                        children: const [
+                          Text(
+                            'Crear Cuenta',
+                            style: TextStyle(
+                                fontFamily: 'Verdana',
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.15),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Completa los campos para registrarte.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontFamily: 'Verdana',
+                                fontSize: 14,
+                                letterSpacing: 0.15),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Por favor, completa los campos para registrarte.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color.fromARGB(255, 0, 0, 0),
-                          fontFamily: 'Verdana',
-                          fontSize: 14,
-                          fontWeight: FontWeight.normal,
-                          letterSpacing: 0.15,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            ..._buildFormFields(),
-                            const SizedBox(height: 32),
-                            CustomButton(
-                              text: 'Crear Cuenta',
-                              onPressed: _register,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Formulario
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          CustomTextField(
+                            controller: _controllers['nombre']!,
+                            label: 'Nombre',
+                            icon: Icons.person,
+                            validator: (v) => _validateField(v, 'el nombre'),
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _controllers['cedula']!,
+                            label: 'Cédula',
+                            icon: Icons.badge,
+                            keyboardType: TextInputType.number,
+                            validator: (v) => _validateField(v, 'la cédula'),
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _controllers['telefono']!,
+                            label: 'Teléfono',
+                            icon: Icons.phone,
+                            keyboardType: TextInputType.phone,
+                            validator: (v) => _validateField(v, 'el teléfono'),
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _controllers['direccion']!,
+                            label: 'Dirección',
+                            icon: Icons.home,
+                            validator: (v) =>
+                                _validateField(v, 'la dirección'),
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _controllers['email']!,
+                            label: 'Correo Electrónico',
+                            icon: Icons.email,
+                            validator: _validateEmail,
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _controllers['password']!,
+                            label: 'Contraseña',
+                            icon: Icons.lock,
+                            isPassword: true,
+                            validator: _validatePassword,
+                          ),
+                          const SizedBox(height: 16),
+                          CustomTextField(
+                            controller: _controllers['confirmPassword']!,
+                            label: 'Confirmar Contraseña',
+                            icon: Icons.lock_outline,
+                            isPassword: true,
+                            validator: _validatePassword,
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Selector de ubicación
+                          ElevatedButton.icon(
+                            onPressed: _pickLocation,
+                            icon: const Icon(Icons.location_on),
+                            label: Text(_latitud == null
+                                ? 'Elegir ubicación de hogar'
+                                : 'Ubicación: '
+                                    '${_latitud!.toStringAsFixed(4)}, '
+                                    '${_longitud!.toStringAsFixed(4)}'),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 48),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
-                            const SizedBox(height: 16),
-                            CustomButton(
-                              text: 'Volver',
-                              onPressed: () {
-                                final args = ModalRoute.of(context)?.settings.arguments as Map?;
-                                if (args != null && args['from'] == 'iniciar') {
-                                  Navigator.pushNamed(context, '/iniciar'); // Navigate back to iniciar sesión
-                                } else {
-                                  Navigator.pushNamed(context, '/inicio'); // Default to inicio
-                                }
-                              },
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          // Botón de envío
+                          CustomButton(
+                            text: 'Crear Cuenta',
+                            onPressed: _register,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            textColor: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 4,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
