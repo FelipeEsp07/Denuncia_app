@@ -230,6 +230,22 @@ class UsuarioDetailView(AdminRequiredView):
             return JsonResponse({'error': 'Usuario no encontrado.'}, status=404)
         except Exception as e:
             return JsonResponse({'error': f'No se pudo eliminar el usuario: {e}'}, status=500)
+        
+    def put(self, request, usuario_id):
+        try:
+            data = json.loads(request.body)
+            usuario = Usuario.objects.get(id=usuario_id)
+            for field in ['nombre','cedula','telefono','direccion','email','latitud','longitud','is_active']:
+                if field in data:
+                    setattr(usuario, field, data[field])
+            usuario.save()
+            return JsonResponse({'message': 'Usuario actualizado correctamente.'}, status=200)
+        except Usuario.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado.'}, status=404)
+        except IntegrityError:
+            return JsonResponse({'error': 'El correo o la cédula ya están en uso.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

@@ -43,6 +43,7 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
   bool _isFetchingRoles = true;
   List<Role> _roles = [];
   final Dio _dio = Dio(BaseOptions(baseUrl: Config.apiBase));
+  final Color _verde = const Color(0xFF2E7D32);
 
   @override
   void initState() {
@@ -62,7 +63,7 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
     setState(() => _isFetchingRoles = true);
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
-    if (token == null || token.isEmpty) {
+    if (token == null) {
       Navigator.pushReplacementNamed(context, '/iniciar');
       return;
     }
@@ -71,13 +72,11 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
       final response = await _dio.get(
         '/roles',
         options: Options(headers: {
-          'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         }),
       );
       if (response.statusCode == 200) {
-        final data = response.data as Map<String, dynamic>;
-        final rolesJson = data['roles'] as List<dynamic>;
+        final rolesJson = (response.data['roles'] as List);
         setState(() {
           _roles = rolesJson.map((e) => Role.fromJson(e)).toList();
         });
@@ -97,13 +96,12 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
     }
 
     final pwd = _controllers['password']!.text.trim();
-    final confirm = _controllers['confirmPassword']!.text.trim();
-    if (pwd != confirm) {
+    final confirmPwd = _controllers['confirmPassword']!.text.trim();
+    if (pwd != confirmPwd) {
       _showMessage('Las contraseñas no coinciden.');
       return;
     }
 
-    // Construimos el request incluyendo latitud y longitud = 0.0
     final request = RegistrationAdminRequest(
       nombre: _controllers['nombre']!.text.trim(),
       cedula: _controllers['cedula']!.text.trim(),
@@ -119,7 +117,7 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
-    if (token == null || token.isEmpty) {
+    if (token == null) {
       Navigator.pushReplacementNamed(context, '/iniciar');
       return;
     }
@@ -129,7 +127,6 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
         '/usuarios',
         data: request.toJson(),
         options: Options(headers: {
-          'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         }),
       );
@@ -138,9 +135,7 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
         _showMessage('Usuario registrado exitosamente.', success: true);
         Navigator.pop(context);
       } else {
-        final msg = response.data['error'] ??
-            response.data['detail'] ??
-            'Error: ${response.statusCode}';
+        final msg = response.data['error'] ?? 'Error: ${response.statusCode}';
         _showMessage(msg);
       }
     } catch (e) {
@@ -151,13 +146,130 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
   }
 
   void _showMessage(String message, {bool success = false}) {
-    final color = success ? Colors.green : Colors.red;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: color),
-      );
-    });
+    final color = success ? _verde : Colors.red;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: _verde,
+        foregroundColor: Colors.white,
+        title: const Text('Registro de Usuarios'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CustomTextField(
+                        controller: _controllers['nombre']!,
+                        label: 'Nombre',
+                        icon: Icons.person,
+                        validator: (v) => _validateField(v, 'el nombre'),
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _controllers['cedula']!,
+                        label: 'Cédula',
+                        icon: Icons.badge,
+                        keyboardType: TextInputType.number,
+                        validator: (v) => _validateField(v, 'la cédula'),
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _controllers['telefono']!,
+                        label: 'Teléfono',
+                        icon: Icons.phone,
+                        keyboardType: TextInputType.phone,
+                        validator: (v) => _validateField(v, 'el teléfono'),
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _controllers['direccion']!,
+                        label: 'Dirección',
+                        icon: Icons.home,
+                        validator: (v) => _validateField(v, 'la dirección'),
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _controllers['email']!,
+                        label: 'Correo Electrónico',
+                        icon: Icons.email,
+                        validator: _validateEmail,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _controllers['password']!,
+                        label: 'Contraseña',
+                        icon: Icons.lock,
+                        isPassword: true,
+                        validator: _validatePassword,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _controllers['confirmPassword']!,
+                        label: 'Confirmar Contraseña',
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                        validator: _validatePassword,
+                      ),
+                      const SizedBox(height: 24),
+                      _isFetchingRoles
+                          ? const Center(child: CircularProgressIndicator())
+                          : DropdownButtonFormField<int>(
+                              value: _selectedRoleId,
+                              decoration: InputDecoration(
+                                hintText: 'Seleccionar Rol',
+                                prefixIcon: Icon(Icons.admin_panel_settings, color: _verde),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              items: _roles.map((role) {
+                                return DropdownMenuItem<int>(
+                                  value: role.id,
+                                  child: Text(role.nombre),
+                                );
+                              }).toList(),
+                              onChanged: (value) => setState(() => _selectedRoleId = value),
+                              validator: (value) => value == null ? 'Seleccione un rol.' : null,
+                            ),
+                      const SizedBox(height: 32),
+                      CustomButton(
+                        text: 'Crear Cuenta',
+                        onPressed: _register,
+                        backgroundColor: _verde,
+                        textColor: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   String? _validateField(String? value, String fieldName) {
@@ -186,175 +298,5 @@ class _RegistroAdminScreenState extends State<RegistroAdminScreen> {
       return 'La contraseña debe tener al menos 6 caracteres.';
     }
     return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Encabezado
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF2F1F6).withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 8,
-                              offset: Offset(0, 4)),
-                        ],
-                      ),
-                      child: Column(
-                        children: const [
-                          Text(
-                            'Registrar Usuario',
-                            style: TextStyle(
-                                fontFamily: 'Verdana',
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.15),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Formulario de registro para nuevos usuarios.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontFamily: 'Verdana',
-                                fontSize: 14,
-                                letterSpacing: 0.15),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Formulario
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          CustomTextField(
-                            controller: _controllers['nombre']!,
-                            label: 'Nombre',
-                            icon: Icons.person,
-                            validator: (v) => _validateField(v, 'el nombre'),
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _controllers['cedula']!,
-                            label: 'Cédula',
-                            icon: Icons.badge,
-                            keyboardType: TextInputType.number,
-                            validator: (v) =>
-                                _validateField(v, 'la cédula'),
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _controllers['telefono']!,
-                            label: 'Teléfono',
-                            icon: Icons.phone,
-                            keyboardType: TextInputType.phone,
-                            validator: (v) =>
-                                _validateField(v, 'el teléfono'),
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _controllers['direccion']!,
-                            label: 'Dirección',
-                            icon: Icons.home,
-                            validator: (v) =>
-                                _validateField(v, 'la dirección'),
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _controllers['email']!,
-                            label: 'Correo Electrónico',
-                            icon: Icons.email,
-                            validator: _validateEmail,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _controllers['password']!,
-                            label: 'Contraseña',
-                            icon: Icons.lock,
-                            isPassword: true,
-                            validator: _validatePassword,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _controllers['confirmPassword']!,
-                            label: 'Confirmar Contraseña',
-                            icon: Icons.lock_outline,
-                            isPassword: true,
-                            validator: _validatePassword,
-                          ),
-                          const SizedBox(height: 24),
-
-                          _isFetchingRoles
-                              ? const Center(child: CircularProgressIndicator())
-                              : DropdownButtonFormField<int>(
-                                  value: _selectedRoleId,
-                                  hint: const Text('Seleccionar Rol'),
-                                  decoration: InputDecoration(
-                                    prefixIcon:
-                                        const Icon(Icons.admin_panel_settings),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  items: _roles.map((role) {
-                                    return DropdownMenuItem<int>(
-                                      value: role.id,
-                                      child: Text(role.nombre),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) =>
-                                      setState(() => _selectedRoleId = value),
-                                  validator: (value) {
-                                    if (value == null) {
-                                      return 'Seleccione un rol.';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                          const SizedBox(height: 32),
-
-                         CustomButton(
-                            text: 'Crear Cuenta',
-                            onPressed: () {
-                              if (_isLoading) return;
-                              _register();
-                            },
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            textColor: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            elevation: 4,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

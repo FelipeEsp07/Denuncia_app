@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config.dart';
 import '../models/usuario.dart';
+import '../screens/edit_user_screen.dart';
 
 class ListaUsuariosScreen extends StatefulWidget {
   const ListaUsuariosScreen({Key? key}) : super(key: key);
@@ -15,6 +16,9 @@ class ListaUsuariosScreen extends StatefulWidget {
 class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
   bool _loading = true;
   List<Usuario> _usuarios = [];
+  List<Usuario> _filteredUsuarios = [];
+  String _searchQuery = '';
+
   late final String apiBaseUrl;
 
   @override
@@ -40,8 +44,10 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
       );
       if (res.statusCode == 200) {
         final List<dynamic> data = json.decode(res.body)['usuarios'];
+        List<Usuario> fetchedUsuarios = data.map((e) => Usuario.fromJson(e)).toList();
         setState(() {
-          _usuarios = data.map((e) => Usuario.fromJson(e)).toList();
+          _usuarios = fetchedUsuarios;
+          _filteredUsuarios = fetchedUsuarios;
           _loading = false;
         });
       } else {
@@ -53,6 +59,15 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
         SnackBar(content: Text('No pude cargar usuarios: $e')),
       );
     }
+  }
+
+  void _filterUsers() {
+    setState(() {
+      _filteredUsuarios = _usuarios.where((user) {
+        final matchName = user.nombre.toLowerCase().contains(_searchQuery.toLowerCase());
+        return matchName;
+      }).toList();
+    });
   }
 
   Future<void> _deleteUser(int id) async {
@@ -77,43 +92,142 @@ class _ListaUsuariosScreenState extends State<ListaUsuariosScreen> {
     }
   }
 
+  Future<void> _confirmDeleteUser(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Eliminar usuario?'),
+        content: const Text('¿Estás seguro que quieres eliminar este usuario? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            child: const Text('Cancelar'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _deleteUser(id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:
-          AppBar(title: const Text('Lista de Usuarios'), backgroundColor: const Color(0xFF2E7D32)),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _usuarios.isEmpty
-              ? const Center(child: Text('No hay usuarios para mostrar.'))
-              : ListView.builder(
-                  itemCount: _usuarios.length,
-                  itemBuilder: (context, i) {
-                    final u = _usuarios[i];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-                      child: ListTile(
-                        title: Text(u.nombre),
-                        subtitle: Text('${u.email} • ${u.rol?.nombre ?? "Sin rol"}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () {
-                                // TODO: navegar a editar perfil
-                              },
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF2E7D32),
+        elevation: 4,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+        title: const Text(
+          'Lista de Usuarios',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: Column(
+        children: [
+          _buildSearchBar(),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF2E7D32)))
+                : _filteredUsuarios.isEmpty
+                    ? const Center(child: Text('No hay usuarios que coincidan.', style: TextStyle(fontSize: 16)))
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemCount: _filteredUsuarios.length,
+                        itemBuilder: (context, i) {
+                          final u = _filteredUsuarios[i];
+                          return Hero(
+                            tag: 'user_${u.id}',
+                            child: Card(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 6,
+                              shadowColor: Colors.black26,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                leading: CircleAvatar(
+                                  radius: 28,
+                                  backgroundColor: Colors.green[100],
+                                  child: const Icon(Icons.person, color: Colors.green, size: 30),
+                                ),
+                                title: Text(
+                                  u.nombre,
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Text(
+                                  '${u.email}\n${u.rol?.nombre ?? "Sin rol"}',
+                                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                                ),
+                                isThreeLine: true,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: Colors.blue[50],
+                                      child: IconButton(
+                                        icon: const Icon(Icons.edit, color: Colors.blue),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (_) => EditUserScreen(usuario: u)),
+                                          ).then((_) => _fetchUsers());
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    CircleAvatar(
+                                      backgroundColor: Colors.red[50],
+                                      child: IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.red),
+                                        onPressed: () => _confirmDeleteUser(u.id),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteUser(u.id),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: SizedBox(
+        width: double.infinity,
+        child: TextField(
+          decoration: InputDecoration(
+            hintText: 'Buscar usuario por nombre...',
+            prefixIcon: const Icon(Icons.search),
+            filled: true,
+            fillColor: Colors.green[50],
+            contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          onChanged: (value) {
+            _searchQuery = value;
+            _filterUsers();
+          },
+        ),
+      ),
     );
   }
 }

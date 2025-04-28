@@ -14,6 +14,7 @@ import 'screens/supervisar_denuncias_screen.dart';
 import 'screens/gestion_roles_screen.dart';
 import 'screens/generar_informes_screen.dart';
 import 'screens/seleccionar_ubicacion_mapa_screen.dart';
+import 'screens/lista_usuarios_screen.dart';
 
 // Gestión de Usuarios
 import 'screens/gest_usuarios.dart';             
@@ -53,10 +54,9 @@ class MyApp extends StatelessWidget {
         '/gestUsuarios': (context) => const GestUsuariosScreen(),
         '/gestionUsuarios/registro': (context) => const RegistroAdminScreen(),
         '/gestionUsuarios/lista': (context) => const ListaUsuariosScreen(), 
-
-
-
         '/gestionRoles': (context) => const GestionRolesScreen(),
+
+
         '/generarInformes': (context) => const GenerarInformesScreen(),
         '/seleccionarUbicacionMapa': (context) =>
             const SeleccionarUbicacionMapaScreen(
