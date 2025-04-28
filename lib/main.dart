@@ -1,21 +1,23 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'screens/inicio_screen.dart';
 import 'screens/registro_screen.dart';
 import 'screens/iniciar_screen.dart';
-import 'screens/main_screen.dart';               // <<-- Importa tu MainScreen
+import 'screens/main_screen.dart';
 import 'screens/perfil_screen.dart';
 import 'screens/realizar_denuncia_screen.dart';
 import 'screens/ver_denuncias_screen.dart';
 import 'screens/moderador_denuncias_screen.dart';
 import 'screens/vista_administrador_screen.dart';
 import 'screens/supervisar_denuncias_screen.dart';
-import 'screens/gestionar_usuarios_screen.dart';
+import 'screens/gestion_roles_screen.dart';
 import 'screens/generar_informes_screen.dart';
 import 'screens/seleccionar_ubicacion_mapa_screen.dart';
+
+// Gestión de Usuarios
+import 'screens/gest_usuarios.dart';             
+import 'screens/registro_admin_screen.dart';       
 
 void main() {
   runApp(const MyApp());
@@ -31,7 +33,6 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.green,
       ),
-
       initialRoute: '/inicio',
       routes: {
         '/': (context) => const IniciarScreen(),
@@ -47,7 +48,15 @@ class MyApp extends StatelessWidget {
         '/vistaModerador': (context) => const ModeradorDenunciasScreen(),
         '/vistaAdministrador': (context) => const VistaAdministradorScreen(),
         '/supervisarDenuncias': (context) => const SupervisarDenunciasScreen(),
-        '/gestionarUsuarios': (context) => const GestionarUsuariosScreen(),
+
+        // Gestión de Usuarios
+        '/gestUsuarios': (context) => const GestUsuariosScreen(),
+        '/gestionUsuarios/registro': (context) => const RegistroAdminScreen(),
+        '/gestionUsuarios/lista': (context) => const ListaUsuariosScreen(), 
+
+
+
+        '/gestionRoles': (context) => const GestionRolesScreen(),
         '/generarInformes': (context) => const GenerarInformesScreen(),
         '/seleccionarUbicacionMapa': (context) =>
             const SeleccionarUbicacionMapaScreen(

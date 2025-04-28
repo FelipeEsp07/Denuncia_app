@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'gestion_roles_screen.dart'; 
+import 'gest_usuarios.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({Key? key}) : super(key: key);
@@ -113,25 +115,41 @@ class _MainScreenState extends State<MainScreen> {
                         _buildRoleButton(
                           icon: Icons.report,
                           label: 'Reportar un Problema',
-                          route: '/realizar_denuncia',
+                          onPressed: () => Navigator.pushNamed(context, '/realizar_denuncia'),
                         ),
                       ] else if (_role == 'moderador') ...[
                         _buildRoleButton(
                           icon: Icons.admin_panel_settings,
                           label: 'Vista Moderador',
-                          route: '/vistaModerador',
+                          onPressed: () => Navigator.pushNamed(context, '/vistaModerador'),
                         ),
                       ] else if (_role == 'administrador') ...[
                         _buildRoleButton(
                           icon: Icons.admin_panel_settings,
                           label: 'Vista Administrador',
-                          route: '/vistaAdministrador',
+                          onPressed: () => Navigator.pushNamed(context, '/vistaAdministrador'),
                         ),
                         const SizedBox(height: 12),
                         _buildRoleButton(
                           icon: Icons.settings,
                           label: 'Gestión de Roles',
-                          route: '/gestionRoles',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const GestionRolesScreen()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildRoleButton(
+                          icon: Icons.group,
+                          label: 'Gestión de Usuarios',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const GestUsuariosScreen()),
+                            );
+                          },
                         ),
                       ] else ...[
                         Center(child: Text('Rol desconocido: $_role')),
@@ -199,11 +217,24 @@ class _MainScreenState extends State<MainScreen> {
             title: const Text('Aprobar Denuncias'),
             onTap: () => Navigator.pushNamed(context, '/aprobarDenuncias'),
           ),
-          if (_role == 'administrador') ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Gestión de Usuarios'),
-            onTap: () => Navigator.pushNamed(context, '/gestionUsuarios'),
-          ),
+          if (_role == 'administrador') ...[
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Gestión de Usuarios'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GestUsuariosScreen()),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Gestión de Roles'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GestionRolesScreen()),
+              ),
+            ),
+          ],
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout),
@@ -218,10 +249,10 @@ class _MainScreenState extends State<MainScreen> {
   ElevatedButton _buildRoleButton({
     required IconData icon,
     required String label,
-    required String route,
+    required VoidCallback onPressed,
   }) {
     return ElevatedButton.icon(
-      onPressed: () => Navigator.pushNamed(context, route),
+      onPressed: onPressed,
       icon: Icon(icon, color: Colors.white),
       label: Text(label, style: const TextStyle(color: Colors.white)),
       style: ElevatedButton.styleFrom(
