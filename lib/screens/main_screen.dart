@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'realizar_denuncia_screen.dart';
 import 'gestion_roles_screen.dart';
 import 'gest_usuarios.dart';
 import 'gestion_clasificacion_denuncias.dart';
+import 'edit_user_screen.dart';  // <-- Importa la pantalla unificada
 
 class MainScreen extends StatefulWidget {
   const MainScreen({Key? key}) : super(key: key);
@@ -34,23 +36,27 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _loadUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
-    _nombre = prefs.getString('user_nombre')?.trim() ?? '';
-    _email = prefs.getString('user_email')?.trim() ?? '';
-    _role = prefs.getString('user_rol')?.trim().toLowerCase() ?? 'usuario';
-    _userLat = prefs.getDouble('user_latitud');
-    _userLng = prefs.getDouble('user_longitud');
-    if (_userLat != null && _userLng != null) {
-      _initialCamera = CameraPosition(
-        target: LatLng(_userLat!, _userLng!),
-        zoom: 16,
-      );
-    }
+    setState(() {
+      _nombre = prefs.getString('user_nombre')?.trim() ?? '';
+      _email = prefs.getString('user_email')?.trim() ?? '';
+      _role = prefs.getString('user_rol')?.trim().toLowerCase() ?? 'usuario';
+      _userLat = prefs.getDouble('user_latitud');
+      _userLng = prefs.getDouble('user_longitud');
+      if (_userLat != null && _userLng != null) {
+        _initialCamera = CameraPosition(
+          target: LatLng(_userLat!, _userLng!),
+          zoom: 16,
+        );
+      }
+    });
   }
 
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    Navigator.pushNamedAndRemoveUntil(context, '/iniciar', (r) => false);
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/iniciar', (route) => false);
+    }
   }
 
   @override
@@ -116,14 +122,10 @@ class _MainScreenState extends State<MainScreen> {
                           _buildRoleButton(
                             icon: Icons.report,
                             label: 'Reportar un Problema',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const RealizarDenunciaScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const RealizarDenunciaScreen()),
+                            ),
                           ),
                         ] else if (_role == 'moderador') ...[
                           _buildRoleButton(
@@ -141,34 +143,28 @@ class _MainScreenState extends State<MainScreen> {
                           _buildRoleButton(
                             icon: Icons.settings,
                             label: 'Gestión de Roles',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const GestionRolesScreen()),
-                              );
-                            },
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const GestionRolesScreen()),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           _buildRoleButton(
                             icon: Icons.group,
                             label: 'Gestión de Usuarios',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const GestUsuariosScreen()),
-                              );
-                            },
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const GestUsuariosScreen()),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           _buildRoleButton(
                             icon: Icons.flag,
                             label: 'Gestión de Clasificación de Denuncias',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const GestionClasificacionDenunciasScreen()),
-                              );
-                            },
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const GestionClasificacionDenunciasScreen()),
+                            ),
                           ),
                         ] else ...[
                           Center(child: Text('Rol desconocido: $_role')),
@@ -225,7 +221,12 @@ class _MainScreenState extends State<MainScreen> {
           ListTile(
             leading: const Icon(Icons.person),
             title: const Text('Ver mi Perfil'),
-            onTap: () => Navigator.pushNamed(context, '/perfil'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const EditUserScreen(esAdmin: false),
+              ),
+            ),
           ),
           if (_role == 'usuario' || _role == 'administrador')
             ListTile(

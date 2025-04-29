@@ -5,20 +5,7 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../config.dart';
 import '../models/registration_admin_request.dart';
-
-class Role {
-  final int id;
-  final String nombre;
-
-  Role({required this.id, required this.nombre});
-
-  factory Role.fromJson(Map<String, dynamic> json) {
-    return Role(
-      id: json['id'] as int,
-      nombre: json['nombre'] as String,
-    );
-  }
-}
+import '../models/role_model.dart';
 
 class RegistroAdminScreen extends StatefulWidget {
   const RegistroAdminScreen({super.key});

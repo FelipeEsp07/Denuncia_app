@@ -22,13 +22,13 @@ class _IniciarScreenState extends State<IniciarScreen> {
   @override
   void initState() {
     super.initState();
-    _loadTokenIntoDio();
+    _setAuthHeader();
   }
 
-  Future<void> _loadTokenIntoDio() async {
+  Future<void> _setAuthHeader() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
-    if (token != null && token.isNotEmpty) {
+    if (token?.isNotEmpty ?? false) {
       _dio.options.headers['Authorization'] = 'Bearer $token';
     }
   }
@@ -42,40 +42,33 @@ class _IniciarScreenState extends State<IniciarScreen> {
 
   Future<void> _login() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
     setState(() => _isLoading = true);
 
     try {
-      final resp = await _dio.post(
-        '/login',
-        data: {
-          'email': _emailCtl.text.trim(),
-          'password': _passCtl.text,
-        },
-      );
+      final response = await _dio.post('/login', data: {
+        'email': _emailCtl.text.trim(),
+        'password': _passCtl.text,
+      });
 
-      final token = resp.data['token'] as String?;
-      final userJson = resp.data['usuario'] as Map<String, dynamic>;
+      final token = response.data['token'] as String?;
+      final user = response.data['usuario'] as Map<String, dynamic>;
 
       if (token == null) {
         _showError('No se recibió token de autenticación.');
         return;
       }
 
-      // Guardar token y datos de usuario
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', token);
-      await prefs.setString('user_nombre', userJson['nombre'] as String);
-      await prefs.setString('user_email', userJson['email'] as String);
+      await prefs.setString('user_nombre', user['nombre']);
+      await prefs.setString('user_email', user['email']);
 
-      final rol = userJson['rol'] as String?;
-      if (rol != null && rol.isNotEmpty) {
-        await prefs.setString('user_rol', rol.toLowerCase()); 
-      } else {
-        await prefs.setString('user_rol', 'usuario');
-      }
+      final rol = (user['rol'] as String?)?.toLowerCase() ?? 'usuario';
+      await prefs.setString('user_rol', rol);
 
-      final lat = userJson['latitud'] as num?;
-      final lng = userJson['longitud'] as num?;
+      final lat = user['latitud'];
+      final lng = user['longitud'];
       if (lat != null && lng != null) {
         await prefs.setDouble('user_latitud', lat.toDouble());
         await prefs.setDouble('user_longitud', lng.toDouble());
@@ -83,23 +76,20 @@ class _IniciarScreenState extends State<IniciarScreen> {
 
       _dio.options.headers['Authorization'] = 'Bearer $token';
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('¡Bienvenido, ${userJson['nombre']}!'),
+          content: Text('¡Bienvenido, ${user['nombre']}!'),
           backgroundColor: Colors.green,
         ),
       );
 
       Navigator.pushReplacementNamed(context, '/main');
-      
-    } on DioError catch (e) {
-      String msg = 'Error de conexión, inténtalo más tarde.';
-      if (e.response != null && e.response!.data is Map<String, dynamic>) {
-        msg = (e.response!.data as Map<String, dynamic>)['error'] 
-              as String? ?? msg;
-      }
-      _showError(msg);
 
+    } on DioError catch (e) {
+      final msg = (e.response?.data as Map?)?['error'] ?? 'Error de conexión.';
+      _showError(msg.toString());
     } catch (_) {
       _showError('Error inesperado.');
     } finally {
@@ -113,19 +103,21 @@ class _IniciarScreenState extends State<IniciarScreen> {
     );
   }
 
-  String? _validateEmail(String? v) {
-    if (v == null || v.trim().isEmpty) return 'El correo es obligatorio.';
-    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) return 'Correo inválido.';
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) return 'El correo es obligatorio.';
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'Correo inválido.';
     return null;
   }
 
-  String? _validatePassword(String? v) {
-    if (v == null || v.isEmpty) return 'La contraseña es obligatoria.';
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) return 'La contraseña es obligatoria.';
     return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -136,42 +128,33 @@ class _IniciarScreenState extends State<IniciarScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
               child: SingleChildScrollView(
-                padding:
-                    EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
                 child: Column(
                   children: [
                     SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.45,
+                      height: size.height * 0.45,
                       child: ClipPath(
                         clipper: ArcClipper(),
-                        child: Container(
-                          color: const Color(0xFFF2F1F6),
-                          width: double.infinity,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Positioned(
-                                top: -50,
-                                child: Image.asset(
-                                  'assets/images/iglesia.jpg',
-                                  fit: BoxFit.cover,
-                                  width: MediaQuery.of(context).size.width,
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.5,
-                                ),
-                              ),
-                              Positioned.fill(
-                                child: Container(
-                                  color: const Color(0xFFF2F1F6).withOpacity(0.8),
-                                ),
-                              ),
-                              Image.asset(
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.asset(
+                              'assets/images/iglesia.jpg',
+                              fit: BoxFit.cover,
+                            ),
+                            Container(
+                              color: const Color(0xFFF2F1F6).withOpacity(0.8),
+                            ),
+                            Center(
+                              child: Image.asset(
                                 'assets/images/facalert_logo.png',
                                 width: 300,
                                 fit: BoxFit.contain,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -188,7 +171,6 @@ class _IniciarScreenState extends State<IniciarScreen> {
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
                           height: 1.4,
-                          letterSpacing: 0.1,
                         ),
                       ),
                     ),
@@ -232,7 +214,6 @@ class _IniciarScreenState extends State<IniciarScreen> {
                     ),
 
                     const SizedBox(height: 30),
-
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
@@ -259,7 +240,6 @@ class _IniciarScreenState extends State<IniciarScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -277,8 +257,7 @@ class ArcClipper extends CustomClipper<Path> {
   Path getClip(Size size) {
     final path = Path();
     path.lineTo(0, size.height - 30);
-    path.quadraticBezierTo(
-        size.width / 2, size.height + 20, size.width, size.height - 30);
+    path.quadraticBezierTo(size.width / 2, size.height + 20, size.width, size.height - 30);
     path.lineTo(size.width, 0);
     path.close();
     return path;

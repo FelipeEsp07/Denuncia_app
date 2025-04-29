@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../models/registro.dart';
 import '../config.dart';
-import '../widgets/map_picker_screen.dart'; 
+import '../widgets/map_picker_screen.dart';
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -16,7 +17,8 @@ class RegistroScreen extends StatefulWidget {
 
 class _RegistroScreenState extends State<RegistroScreen> {
   final _formKey = GlobalKey<FormState>();
-  final Map<String, TextEditingController> _controllers = {
+
+  final _controllers = {
     'nombre': TextEditingController(),
     'cedula': TextEditingController(),
     'telefono': TextEditingController(),
@@ -25,6 +27,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     'password': TextEditingController(),
     'confirmPassword': TextEditingController(),
   };
+
   double? _latitud;
   double? _longitud;
 
@@ -32,15 +35,14 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   @override
   void dispose() {
-    for (var c in _controllers.values) {
-      c.dispose();
+    for (var controller in _controllers.values) {
+      controller.dispose();
     }
     super.dispose();
   }
 
   Future<void> _pickLocation() async {
-    // Centro aproximado de Facatativá
-    final initial = LatLng(4.8176, -74.3542);
+    final initial = LatLng(4.8176, -74.3542); // Facatativá
     final LatLng? pos = await Navigator.push<LatLng>(
       context,
       MaterialPageRoute(
@@ -56,7 +58,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   }
 
   Future<void> _register() async {
-    if (_formKey.currentState?.validate() != true) return;
+    if (!_formKey.currentState!.validate()) return;
 
     if (_latitud == null || _longitud == null) {
       _showMessage('Debes seleccionar tu ubicación en el mapa.');
@@ -71,7 +73,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
 
     try {
-      final registrationRequest = RegistrationRequest(
+      final data = RegistrationRequest(
         nombre: _controllers['nombre']!.text.trim(),
         cedula: _controllers['cedula']!.text.trim(),
         telefono: _controllers['telefono']!.text.trim(),
@@ -82,12 +84,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
         longitud: _longitud!,
       );
 
-      final response = await _dio.post(
-        '/register',
-        data: registrationRequest.toJson(),
-      );
+      final response = await _dio.post('/register', data: data.toJson());
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         _showMessage('Cuenta creada exitosamente.', success: true);
         Navigator.pushReplacementNamed(context, '/inicio');
       } else {
@@ -100,39 +99,27 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   void _showMessage(String message, {bool success = false}) {
     final color = success ? Colors.green : Colors.red;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: color),
-      );
-    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
   }
 
-  String? _validateField(String? value, String fieldName) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Por favor ingrese $fieldName.';
-    }
-    return null;
-  }
+  String? _validateField(String? value, String name) =>
+      (value == null || value.trim().isEmpty)
+          ? 'Por favor ingrese $name.'
+          : null;
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Por favor ingrese el correo.';
-    }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
-      return 'Ingrese un correo válido.';
-    }
+    final pattern = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
+    if (value == null || value.trim().isEmpty) return 'Por favor ingrese el correo.';
+    if (!RegExp(pattern).hasMatch(value)) return 'Ingrese un correo válido.';
     return null;
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Por favor ingrese la contraseña.';
-    }
-    if (value.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres.';
-    }
+    if (value == null || value.trim().isEmpty) return 'Por favor ingrese la contraseña.';
+    if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
     return null;
   }
 
@@ -142,18 +129,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Encabezado
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -161,9 +145,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: const [
                           BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 8,
-                              offset: Offset(0, 4)),
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
                         ],
                       ),
                       child: Column(
@@ -171,26 +156,26 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           Text(
                             'Crear Cuenta',
                             style: TextStyle(
-                                fontFamily: 'Verdana',
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.15),
+                              fontFamily: 'Verdana',
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.15,
+                            ),
                           ),
                           SizedBox(height: 8),
                           Text(
                             'Completa los campos para registrarte.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                fontFamily: 'Verdana',
-                                fontSize: 14,
-                                letterSpacing: 0.15),
+                              fontFamily: 'Verdana',
+                              fontSize: 14,
+                              letterSpacing: 0.15,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // Formulario
                     Form(
                       key: _formKey,
                       child: Column(
@@ -222,8 +207,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                             controller: _controllers['direccion']!,
                             label: 'Dirección',
                             icon: Icons.home,
-                            validator: (v) =>
-                                _validateField(v, 'la dirección'),
+                            validator: (v) => _validateField(v, 'la dirección'),
                           ),
                           const SizedBox(height: 16),
                           CustomTextField(
@@ -249,34 +233,29 @@ class _RegistroScreenState extends State<RegistroScreen> {
                             validator: _validatePassword,
                           ),
                           const SizedBox(height: 24),
-
-                          // Selector de ubicación
                           ElevatedButton.icon(
                             onPressed: _pickLocation,
                             icon: const Icon(Icons.location_on),
-                            label: Text(_latitud == null
-                                ? 'Elegir ubicación de hogar'
-                                : 'Ubicación: '
-                                    '${_latitud!.toStringAsFixed(4)}, '
-                                    '${_longitud!.toStringAsFixed(4)}'),
+                            label: Text(
+                              _latitud == null
+                                  ? 'Elegir ubicación de hogar'
+                                  : 'Ubicación: ${_latitud!.toStringAsFixed(4)}, ${_longitud!.toStringAsFixed(4)}',
+                            ),
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 48),
+                              minimumSize: const Size.fromHeight(48),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 32),
-
-                          // Botón de envío
                           CustomButton(
                             text: 'Crear Cuenta',
                             onPressed: _register,
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
                             textColor: Colors.white,
                             borderRadius: BorderRadius.circular(8),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             elevation: 4,
                           ),
                         ],

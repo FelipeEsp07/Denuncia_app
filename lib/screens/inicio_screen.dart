@@ -6,6 +6,8 @@ class InicioScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -16,41 +18,22 @@ class InicioScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Top Arc with background image and logo
                   ClipPath(
                     clipper: ArcClipper(),
-                    child: Container(
+                    child: SizedBox(
                       height: 300,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0xFFF2F1F6), Color(0xFFE0DFE9)],
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
                       child: Stack(
+                        fit: StackFit.expand,
                         alignment: Alignment.center,
                         children: [
                           Image.asset(
                             'assets/images/sapo.jpg',
                             fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
                           ),
-                          Container(
-                            color: Colors.white.withOpacity(0.6),
-                          ),
+                          Container(color: Colors.white.withOpacity(0.6)),
                           Image.asset(
                             'assets/images/facalert_logo.png',
                             width: 250,
-                            fit: BoxFit.contain,
                           ),
                         ],
                       ),
@@ -59,7 +42,6 @@ class InicioScreen extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Description Text
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
@@ -78,7 +60,6 @@ class InicioScreen extends StatelessWidget {
 
                   const SizedBox(height: 32),
 
-                  // Buttons Section
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
@@ -86,7 +67,7 @@ class InicioScreen extends StatelessWidget {
                         CustomButton(
                           text: 'Iniciar Sesión',
                           onPressed: () => Navigator.pushNamed(context, '/iniciar'),
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: theme.colorScheme.primary,
                           textColor: Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -96,7 +77,7 @@ class InicioScreen extends StatelessWidget {
                         CustomButton(
                           text: 'Registrarse',
                           onPressed: () => Navigator.pushNamed(context, '/registro'),
-                          backgroundColor: Theme.of(context).colorScheme.secondary,
+                          backgroundColor: theme.colorScheme.secondary,
                           textColor: Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           padding: const EdgeInsets.symmetric(vertical: 16),
