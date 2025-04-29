@@ -1,51 +1,44 @@
+import 'clasificacion_denuncia.dart';
+
 class Denuncia {
   final int id;
-  final int usuario;
-  final String titulo;
   final String descripcion;
-  final String tipo;
-  final double latitud;
-  final double longitud;
-  final String fecha;
-  final String estado;
+  final String fecha;   
+  final String? hora;   
+  final ClasificacionDenuncia? clasificacion;
+  final ClasificacionDenuncia? otraClasificacion;
+  final double ubicacionLatitud;
+  final double ubicacionLongitud;
+  final List<String> imagenes;
 
   Denuncia({
     required this.id,
-    required this.usuario,
-    required this.titulo,
     required this.descripcion,
-    required this.tipo,
-    required this.latitud,
-    required this.longitud,
     required this.fecha,
-    required this.estado,
+    this.hora,
+    this.clasificacion,
+    this.otraClasificacion,
+    required this.ubicacionLatitud,
+    required this.ubicacionLongitud,
+    required this.imagenes,
   });
 
   factory Denuncia.fromJson(Map<String, dynamic> json) {
+    ClasificacionDenuncia? _parseClas(Map<String, dynamic>? j) =>
+        j != null ? ClasificacionDenuncia.fromJson(j) : null;
+
     return Denuncia(
-      id: json['id']          is int     ? json['id']          as int    : 0,
-      usuario: json['usuario'] is int     ? json['usuario']     as int    : 0,
-      titulo: (json['titulo']   as String?)    ?? '',
-      descripcion: (json['descripcion'] as String?) ?? '',
-      tipo: (json['tipo']      as String?)    ?? '',
-      latitud: (json['latitud']   as num?)  != null
-          ? (json['latitud'] as num).toDouble()
-          : 0.0,
-      longitud: (json['longitud']  as num?)  != null
-          ? (json['longitud'] as num).toDouble()
-          : 0.0,
-      fecha: (json['fecha']      as String?)  ?? '',
-      estado: (json['estado']    as String?)  ?? '',
+      id: json['id'] as int,
+      descripcion: json['descripcion'] as String,
+      fecha: json['fecha'] as String,
+      hora: json['hora'] as String?,
+      clasificacion: _parseClas(
+          json['clasificacion'] is Map ? json['clasificacion'] as Map<String, dynamic> : null),
+      otraClasificacion: _parseClas(
+          json['otra_clasificacion'] is Map ? json['otra_clasificacion'] as Map<String, dynamic> : null),
+      ubicacionLatitud: (json['ubicacion_latitud'] as num).toDouble(),
+      ubicacionLongitud: (json['ubicacion_longitud'] as num).toDouble(),
+      imagenes: (json['imagenes'] as List<dynamic>).cast<String>(),
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'usuario': usuario,
-        'titulo': titulo,
-        'descripcion': descripcion,
-        'tipo': tipo,
-        'latitud': latitud,
-        'longitud': longitud,
-        'estado': estado,
-      };
 }

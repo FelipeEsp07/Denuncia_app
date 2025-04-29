@@ -20,4 +20,10 @@ urlpatterns = [
     path('api/login', views.LoginUsuarioView.as_view(), name='login-usuario'),
     path('api/profile', views.ProfileUsuarioView.as_view(), name='profile-usuario'),
     path('api/profile/edit', views.EditProfileUsuarioView.as_view(), name='edit-profile-usuario'),
+
+    path('api/clasificaciones',            views.ClasificacionesView.as_view(),     name='clasificaciones-list-create'),
+    path('api/clasificaciones/<int:pk>',   views.ClasificacionDetailView.as_view(), name='clasificaciones-detail'),
+
+    path('api/denuncias',             views.DenunciasView.as_view(),       name='denuncias-list-create'),
+    path('api/denuncias/<int:pk>',    views.DenunciaDetailView.as_view(),  name='denuncias-detail'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -40,29 +40,42 @@ class Usuario(models.Model):
         return f"{self.nombre} <{self.email}> ({self.rol})"
     
 
+class ClasificacionDenuncia(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
 
-
-
-
-
-
-
-
-
-
-
-
+    def __str__(self):
+        return self.nombre
 
 
 class Denuncia(models.Model):
-    usuario = models.IntegerField()
-    titulo = models.CharField(max_length=200)
     descripcion = models.TextField()
-    tipo = models.CharField(max_length=100)
-    latitud = models.FloatField()
-    longitud = models.FloatField()
-    fecha = models.DateTimeField(auto_now_add=True)
-    estado = models.CharField(max_length=50, default='pendiente')
+    ubicacion_latitud = models.FloatField()
+    ubicacion_longitud = models.FloatField()
+    fecha = models.DateField()
+    hora = models.TimeField(null=True, blank=True) 
+    
+    clasificacion = models.ForeignKey(
+        ClasificacionDenuncia, 
+        related_name='denuncias_principal',
+        on_delete=models.PROTECT,
+        null=True, 
+        blank=True
+    )
+    otra_clasificacion = models.ForeignKey(
+        ClasificacionDenuncia, 
+        related_name='denuncias_secundaria',
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
+    )
+    
+    def __str__(self):
+        return f'Denuncia {self.id} - {self.clasificacion.nombre}'
+
+
+class ImagenDenuncia(models.Model):
+    denuncia = models.ForeignKey(Denuncia, on_delete=models.CASCADE, related_name='imagenes')
+    imagen = models.ImageField(upload_to='denuncias/imagenes/')
 
     def __str__(self):
-        return self.titulo
+        return f'Imagen para Denuncia {self.denuncia.id}'

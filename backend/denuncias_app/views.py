@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from .models import Usuario, Rol
+from .models import Usuario, Rol, ClasificacionDenuncia, Denuncia, ImagenDenuncia
 from django.contrib.auth.hashers import make_password, check_password
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 import json
 import jwt
 from django.conf import settings
-from django.db import IntegrityError
-
+from django.db import transaction, IntegrityError
+from datetime import datetime
 
 class AdminRequiredView(View):
     """
@@ -425,3 +425,226 @@ class EditProfileUsuarioView(View):
             return JsonResponse({'error': str(e)}, status=500)
 
         return JsonResponse({'message': 'Perfil actualizado correctamente.'}, status=200)
+    
+
+class AuthRequiredView(View):
+    """
+    Base view que exime CSRF y requiere un JWT válido
+    para cualquier usuario autenticado.
+    """
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return JsonResponse({'error': 'Token no proporcionado.'}, status=401)
+        token = auth_header.split()[1]
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        except jwt.ExpiredSignatureError:
+            return JsonResponse({'error': 'Token expirado.'}, status=401)
+        except jwt.InvalidTokenError:
+            return JsonResponse({'error': 'Token inválido.'}, status=401)
+
+        try:
+            user = Usuario.objects.get(id=payload['user_id'])
+        except Usuario.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado.'}, status=404)
+
+        request.user = user
+        return super().dispatch(request, *args, **kwargs)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ClasificacionesView(AuthRequiredView):
+    """
+    GET  /api/clasificaciones   -> Lista todas las clasificaciones (cualquier usuario autenticado)
+    POST /api/clasificaciones   -> Crea una nueva clasificación (sólo admin)
+    """
+    def get(self, request):
+        qs = ClasificacionDenuncia.objects.all().values('id', 'nombre')
+        return JsonResponse({'clasificaciones': list(qs)}, status=200)
+
+    def post(self, request):
+        # Sólo admin
+        if not request.user.rol or request.user.rol.nombre != 'Administrador':
+            return JsonResponse({'error': 'Permiso denegado.'}, status=403)
+
+        try:
+            data = json.loads(request.body)
+            nombre = data.get('nombre')
+            if not nombre:
+                return JsonResponse({'error': 'El nombre es requerido.'}, status=400)
+
+            clas = ClasificacionDenuncia.objects.create(nombre=nombre)
+            return JsonResponse({'message': 'Clasificación creada.', 'id': clas.id}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido.'}, status=400)
+        except IntegrityError:
+            return JsonResponse({'error': 'Ya existe esa clasificación.'}, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ClasificacionDetailView(AuthRequiredView):
+    """
+    GET    /api/clasificaciones/<pk>  -> Detalle de clasificación (usuario autenticado)
+    PUT    /api/clasificaciones/<pk>  -> Edita el nombre (sólo admin)
+    DELETE /api/clasificaciones/<pk>  -> Elimina la clasificación (sólo admin)
+    """
+    def get(self, request, pk):
+        try:
+            c = ClasificacionDenuncia.objects.get(id=pk)
+            return JsonResponse({'id': c.id, 'nombre': c.nombre}, status=200)
+        except ClasificacionDenuncia.DoesNotExist:
+            return JsonResponse({'error': 'Clasificación no encontrada.'}, status=404)
+
+    def put(self, request, pk):
+        # Sólo admin
+        if not request.user.rol or request.user.rol.nombre != 'Administrador':
+            return JsonResponse({'error': 'Permiso denegado.'}, status=403)
+
+        try:
+            data = json.loads(request.body)
+            nombre = data.get('nombre')
+            if not nombre:
+                return JsonResponse({'error': 'El nombre es requerido.'}, status=400)
+
+            c = ClasificacionDenuncia.objects.get(id=pk)
+            c.nombre = nombre
+            c.save()
+            return JsonResponse({'message': 'Clasificación actualizada.'}, status=200)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido.'}, status=400)
+        except ClasificacionDenuncia.DoesNotExist:
+            return JsonResponse({'error': 'Clasificación no encontrada.'}, status=404)
+        except IntegrityError:
+            return JsonResponse({'error': 'Ya existe esa clasificación.'}, status=400)
+
+    def delete(self, request, pk):
+        # Sólo admin
+        if not request.user.rol or request.user.rol.nombre != 'Administrador':
+            return JsonResponse({'error': 'Permiso denegado.'}, status=403)
+
+        try:
+            ClasificacionDenuncia.objects.get(id=pk).delete()
+            return JsonResponse({'message': 'Clasificación eliminada.'}, status=200)
+        except ClasificacionDenuncia.DoesNotExist:
+            return JsonResponse({'error': 'Clasificación no encontrada.'}, status=404)
+            
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DenunciasView(AuthRequiredView):
+    """
+    GET  /api/denuncias    -> Lista todas las denuncias
+    POST /api/denuncias    -> Crea una nueva denuncia
+    """
+    def get(self, request):
+        qs = Denuncia.objects.select_related('clasificacion', 'otra_clasificacion')\
+                              .prefetch_related('imagenes')\
+                              .order_by('-fecha', '-hora')
+        data = []
+        for d in qs:
+            data.append({
+                'id': d.id,
+                'descripcion': d.descripcion,
+                'fecha': d.fecha.isoformat(),
+                'hora': d.hora.strftime('%H:%M') if d.hora else None,
+                'clasificacion': d.clasificacion.nombre if d.clasificacion else None,
+                'otra_clasificacion': d.otra_clasificacion.nombre if d.otra_clasificacion else None,
+                'ubicacion_latitud': d.ubicacion_latitud,
+                'ubicacion_longitud': d.ubicacion_longitud,
+                'imagenes': [request.build_absolute_uri(img.imagen.url) for img in d.imagenes.all()],
+            })
+        return JsonResponse({'denuncias': data}, status=200)
+
+    def post(self, request):
+        try:
+            descripcion = request.POST.get('descripcion')
+            fecha = request.POST.get('fecha')            
+            hora = request.POST.get('hora')         
+            clas_id = request.POST.get('clasificacion_id')
+            otra_id = request.POST.get('otra_clasificacion_id')
+            lat = request.POST.get('ubicacion_latitud')
+            lng = request.POST.get('ubicacion_longitud')
+
+            if not all([descripcion, fecha, clas_id, lat, lng]):
+                return JsonResponse({'error': 'Faltan campos obligatorios.'}, status=400)
+            fecha_obj = datetime.fromisoformat(fecha).date()
+            hora_obj = datetime.strptime(hora, '%H:%M').time() if hora else None
+
+            with transaction.atomic():
+                d = Denuncia.objects.create(
+                    descripcion=descripcion,
+                    fecha=fecha_obj,
+                    hora=hora_obj,
+                    clasificacion_id=int(clas_id),
+                    otra_clasificacion_id=int(otra_id) if otra_id else None,
+                    ubicacion_latitud=float(lat),
+                    ubicacion_longitud=float(lng),
+                )
+                for f in request.FILES.getlist('imagenes'):
+                    ImagenDenuncia.objects.create(denuncia=d, imagen=f)
+
+            return JsonResponse({'message': 'Denuncia creada.', 'id': d.id}, status=201)
+        except ClasificacionDenuncia.DoesNotExist:
+            return JsonResponse({'error': 'Clasificación inválida.'}, status=400)
+        except ValueError as ve:
+            return JsonResponse({'error': f'Formato inválido: {ve}'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DenunciaDetailView(AuthRequiredView):
+    """
+    GET    /api/denuncias/<pk>  -> Detalle de una denuncia
+    PUT    /api/denuncias/<pk>  -> Actualiza datos de la denuncia
+    DELETE /api/denuncias/<pk>  -> Elimina la denuncia
+    """
+    def get(self, request, pk):
+        try:
+            d = Denuncia.objects.select_related('clasificacion','otra_clasificacion')\
+                                .prefetch_related('imagenes')\
+                                .get(id=pk)
+            return JsonResponse({
+                'id': d.id,
+                'descripcion': d.descripcion,
+                'fecha': d.fecha.isoformat(),
+                'hora': d.hora.isoformat() if d.hora else None,
+                'clasificacion': d.clasificacion.nombre if d.clasificacion else None,
+                'otra_clasificacion': d.otra_clasificacion.nombre if d.otra_clasificacion else None,
+                'ubicacion_latitud': d.ubicacion_latitud,
+                'ubicacion_longitud': d.ubicacion_longitud,
+                'imagenes': [request.build_absolute_uri(img.imagen.url) for img in d.imagenes.all()],
+            }, status=200)
+        except Denuncia.DoesNotExist:
+            return JsonResponse({'error': 'Denuncia no encontrada.'}, status=404)
+
+    def put(self, request, pk):
+        try:
+            data = json.loads(request.body)
+            d = Denuncia.objects.get(id=pk)
+            for field in ['descripcion','fecha','hora','clasificacion_id',
+                          'otra_clasificacion_id','ubicacion_latitud','ubicacion_longitud']:
+                if field in data:
+                    val = data[field]
+                    if field == 'fecha':
+                        setattr(d, field, datetime.fromisoformat(val).date())
+                    elif field == 'hora' and val:
+                        setattr(d, field, datetime.fromisoformat(val).time())
+                    else:
+                        setattr(d, field.replace('_id',''), val if not field.endswith('_id') else int(val))
+            d.save()
+            return JsonResponse({'message': 'Denuncia actualizada.'}, status=200)
+        except Denuncia.DoesNotExist:
+            return JsonResponse({'error': 'Denuncia no encontrada.'}, status=404)
+        except (ValueError, IntegrityError) as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    def delete(self, request, pk):
+        try:
+            Denuncia.objects.get(id=pk).delete()
+            return JsonResponse({'message': 'Denuncia eliminada.'}, status=200)
+        except Denuncia.DoesNotExist:
+            return JsonResponse({'error': 'Denuncia no encontrada.'}, status=404)
